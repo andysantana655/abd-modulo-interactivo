@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Administración de Base de Datos — Laboratorio de INSERT y Errores (SQL Server)</title>
+<style>
+:root{
+  --bg: #f8fafc;
+  --ink:#0f172a; --muted:#475569; --card:#ffffff;
+  --ok:#16a34a; --warn:#f59e0b; --err:#ef4444; --sky:#38bdf8; --vio:#8b5cf6; --green:#22c55e;
+}
+:root.dark{
+  --bg:#0b1220; --ink:#e5e7eb; --muted:#94a3b8; --card:#0f172a;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:Segoe UI,Roboto,Arial,system-ui,sans-serif;color:var(--ink);background:linear-gradient(135deg,var(--bg),#eef9ff)}
+/* Hero */
+.hero{position:relative;overflow:hidden;padding:80px 24px 56px;border-bottom:1px solid #e2e8f0}
+.hero .brand{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.hero .logo{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#22c55e);box-shadow:0 8px 24px rgba(14,165,233,.35)}
+.hero h1{margin:0;font-size:clamp(28px,5vw,56px);font-weight:900;letter-spacing:.4px;background:linear-gradient(90deg,#0ea5e9,#8b5cf6,#22c55e);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 10px rgba(14,165,233,.25))}
+.hero p{max-width:1000px;margin:12px 0 0;color:#0b2b3e;font-size:clamp(14px,2.2vw,18px)}
+.blob{position:absolute;filter:blur(42px);opacity:.35;animation:float 9s ease-in-out infinite alternate}
+.blob.one{width:360px;height:360px;background:radial-gradient(circle at 30% 30%, #0ea5e9, transparent 60%);top:-60px;left:-40px}
+.blob.two{width:420px;height:420px;background:radial-gradient(circle at 70% 50%, #8b5cf6, transparent 55%);bottom:-90px;right:-60px;animation-duration:12s}
+@keyframes float{to{transform:translateY(16px) translateX(10px)}}
+/* Nav */
+nav{position:sticky;top:0;background:#ffffffcc;backdrop-filter:blur(8px);border-bottom:1px solid #e2e8f0;z-index:5}
+nav .wrap{display:flex;gap:16px;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto;padding:10px 16px}
+nav a{color:var(--ink);text-decoration:none;padding:8px 12px;border-radius:10px;font-weight:700}
+nav a:hover{background:#e2f2ff}
+.toggle{display:flex;gap:8px;align-items:center}
+.theme{display:flex;align-items:center;gap:8px}
+.theme input{accent-color:#0ea5e9}
+/* Sections */
+.section{max-width:1200px;margin:32px auto;padding:0 16px}
+.card{background:var(--card);border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 20px rgba(2,6,23,.06);padding:20px}
+.grid{display:grid;gap:16px}
+@media(min-width:920px){.grid.cols-3{grid-template-columns:repeat(3,1fr)}.grid.cols-2{grid-template-columns:repeat(2,1fr)}}
+.section h2{font-size:clamp(20px,3.4vw,28px);margin:0 0 14px}
+.section p.lead{color:var(--muted);margin:0 0 14px}
+/* Timeline */
+.timeline{position:relative;padding-left:24px}
+.timeline:before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:3px;background:#e2e8f0;border-radius:3px}
+.step{position:relative;margin:10px 0;padding:12px;border-radius:12px;background:#fbfbfe;border:1px solid #eef2ff;transition:transform .25s}
+.step:hover{transform:translateX(4px)}
+.step .dot{position:absolute;left:-24px;top:14px;width:14px;height:14px;border-radius:50%;background:var(--sky);box-shadow:0 0 0 4px #e0f2fe}
+/* Simulator */
+.panel{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px}
+.panel .badge{background:#e0f2fe;color:#0b2b3e;border:1px solid #bae6fd;border-radius:999px;padding:6px 10px;font-size:12px}
+.panel label{font-size:12px;color:var(--muted)}
+.panel input[type=range]{width:200px}
+.error-card{position:relative;overflow:hidden}
+.error-card h3{margin:0 0 8px;font-size:18px}
+.badge{display:inline-block;border-radius:999px;padding:4px 10px;font-size:12px;color:#0b2b3e;background:#e0f2fe;border:1px solid #bae6fd}
+.code{background:#0b1220;color:#e2e8f0;border-radius:12px;padding:14px;font-family:ui-monospace,Consolas,Menlo,monospace;line-height:1.6;position:relative}
+.console{background:#0b1220;color:#e2e8f0;border-radius:12px;padding:12px;height:120px;overflow:auto;font-family:ui-monospace,Consolas,Menlo,monospace;border:1px solid #192038}
+.controls{display:flex;gap:8px;margin-top:10px}
+.btn{background:linear-gradient(90deg,#0ea5e9,#22c55e);color:#fff;border:none;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer}
+.btn.secondary{background:#e2e8f0;color:var(--ink)}
+.toast{position:absolute;right:12px;top:12px;padding:10px 12px;border-radius:10px;color:#fff;font-weight:700;display:none}
+.toast.ok{background:#16a34a}
+.toast.err{background:#ef4444}
+.shake{animation:shake .4s ease-in-out 0s 2}
+@keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-6px)}100%{transform:translateX(0)}}
+.typing{border-right:2px solid #e2e8f0;white-space:pre-wrap;animation:blink 1s step-end infinite}
+@keyframes blink{50%{border-color:transparent}}
+.highlight{animation:glow 1.2s ease-in-out}
+@keyframes glow{0%{box-shadow:0 0 0 rgba(239,68,68,0)}50%{box-shadow:0 0 28px rgba(239,68,68,.55)}100%{box-shadow:0 0 0 rgba(239,68,68,0)}}
+/* Quiz */
+.quiz-item{padding:12px;border:1px solid #e2e8f0;border-radius:12px;margin:8px 0;background:#fff}
+.quiz-item h4{margin:0 0 6px;font-size:16px}
+.quiz-item label{display:block;margin:4px 0}
+.result{padding:10px;border-radius:10px;display:none;margin-top:10px}
+.result.ok{background:#dcfce7;color:#166534}
+.result.err{background:#fee2e2;color:#991b1b}
+/* Dark mode */
+.dark body{background:linear-gradient(135deg,#0b1220,#0b1220)}
+.dark nav{background:#0b1220d1;border-color:#111827}
+.dark .card{border-color:#111827;box-shadow:0 8px 20px rgba(0,0,0,.35)}
+.dark .section p.lead{color:#94a3b8}
+@media (prefers-reduced-motion: reduce){.blob,.shake,.hero h1{animation:none}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="wrap">
+    <div class="toggle"><div class="logo" aria-hidden="true"></div><strong>ABD · INSERT & Errores</strong></div>
+    <div class="toggle">
+      <a href="#objetivo">Objetivo</a>
+      <a href="#momentos">Momentos</a>
+      <a href="#simulador">Simulador</a>
+      <a href="#evaluacion">Evaluación</a>
+      <div class="theme"><label for="dm">🌙</label><input type="checkbox" id="dm" /></div>
+    </div>
+  </div>
+</nav>
+<section class="hero">
+  <div class="blob one" aria-hidden="true"></div>
+  <div class="blob two" aria-hidden="true"></div>
+  <div class="brand"><div class="logo"></div><div>Administración de Base de Datos</div></div>
+  <h1>Laboratorio de <span title="INSERT en SQL Server">INSERT</span> & Errores</h1>
+  <p>Una experiencia interactiva para aprender, de forma visual y divertida, cómo se producen y se corrigen los errores más comunes al insertar en SQL Server.</p>
+</section>
+
+<section id="objetivo" class="section">
+  <div class="card">
+    <h2>Objetivo de la clase</h2>
+    <p class="lead">Al finalizar, el estudiante será capaz de <strong>identificar</strong>, <strong>explicar</strong> y <strong>corregir</strong> errores frecuentes en operaciones <code>INSERT</code> (PK/UNIQUE, truncamiento, conversión de tipos, IDENTITY, desalineo de columnas y contexto de base) aplicando buenas prácticas de administración de datos.</p>
+    <p style="margin:0;color:#64748b">Fecha: 10/11/2025</p>
+  </div>
+</section>
+
+<section id="momentos" class="section">
+  <h2>Los 3 momentos de la clase</h2>
+  <div class="grid cols-3">
+    <div class="card">
+      <h3>Inicio</h3>
+      <div class="timeline">
+        <div class="step"><span class="dot"></span><strong>Activación</strong>: lluvia de ideas sobre errores que ya han visto en SSMS.</div>
+        <div class="step"><span class="dot"></span><strong>Objetivo visible</strong>: qué aprenderemos y cómo se evaluará.</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Desarrollo</h3>
+      <div class="timeline">
+        <div class="step"><span class="dot"></span><strong>Demostración guiada</strong>: simulador de INSERT con realce del error.</div>
+        <div class="step"><span class="dot"></span><strong>Práctica</strong>: ejecutar correcciones y comparar salidas.</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Cierre</h3>
+      <div class="timeline">
+        <div class="step"><span class="dot"></span><strong>Resumen</strong>: patrón de diagnóstico + check-list.</div>
+        <div class="step"><span class="dot"></span><strong>Proyección</strong>: tarea corta con 1 error + 1 corrección.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="simulador" class="section">
+  <h2>Simulador interactivo de INSERT y Errores</h2>
+  <p class="lead">Ajusta la <em>velocidad</em> y pulsa <strong>Ejecutar INSERT</strong> para ver el mensaje devuelto por SQL Server; luego prueba <strong>Ver corrección</strong>.</p>
+  <div class="panel">
+    <span class="badge">Controles del simulador</span>
+    <label for="spd">Velocidad de tipeo</label>
+    <input type="range" id="spd" min="4" max="40" value="14" />
+    <span id="spdval" class="badge">14 ms/char</span>
+  </div>
+  <div class="grid cols-2" id="cards"></div>
+</section>
+
+<section id="evaluacion" class="section">
+  <div class="card">
+    <h2>Evaluación — Nivel: Conocimiento</h2>
+    <p class="lead">Selecciona la opción correcta. Al finalizar verás tu puntuación.</p>
+    <div id="quiz"></div>
+    <div class="controls"><button class="btn" onclick="gradeQuiz()">Calificar</button><button class="btn secondary" onclick="resetQuiz()">Reiniciar</button></div>
+    <div id="score" class="result" role="status" aria-live="polite"></div>
+  </div>
+</section>
+
+<script>
+// ---- theme ----
+const root = document.documentElement;
+const dm = document.getElementById('dm');
+dm.addEventListener('change', ()=>{
+  if(dm.checked) root.classList.add('dark'); else root.classList.remove('dark');
+});
+
+// ---- audio (beep/ding) ----
+function playTone(freq=440, dur=0.12, vol=0.08){
+  try{
+    const actx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = actx.createOscillator(); const g = actx.createGain();
+    o.type='sine'; o.frequency.value=freq; g.gain.value=vol; o.connect(g); g.connect(actx.destination);
+    o.start(); setTimeout(()=>{o.stop(); actx.close();}, dur*1000);
+  }catch(e){}
+}
+
+// ---- scenarios ----
+const scenarios=[
+ {id:'pk',  title:'Violación de PRIMARY KEY',        badge:'Error 2627', insert:`INSERT INTO lab.DemoPK(Id, Nombre) VALUES (1, 'Duplicada');`, error:`Msg 2627
+Violation of PRIMARY KEY constraint. Cannot insert duplicate key.`, fix:`INSERT INTO lab.DemoPK(Id, Nombre) VALUES (2, 'OK');`, ok:`(1 row affected)`},
+ {id:'uniq',title:'Duplicado en índice UNIQUE',       badge:'Error 2601', insert:`INSERT INTO lab.DemoUnique(Nombre, Email) VALUES ('Ana 2','ana@eco.com');`, error:`Msg 2601
+Cannot insert duplicate key row in object with unique index.`, fix:`INSERT INTO lab.DemoUnique(Nombre, Email) VALUES ('Luis','luis@eco.com');`, ok:`(1 row affected)`},
+ {id:'tr',  title:'Truncamiento de datos',           badge:'Error 8152 / 2628', insert:`INSERT INTO lab.DemoTelefono(Telefono) VALUES ('809-000-0000');`, error:`Msg 8152
+String or binary data would be truncated.`, fix:`INSERT INTO lab.DemoTelefono(Telefono) VALUES (REPLACE('809-000-0000','-',''));`, ok:`(1 row affected)`},
+ {id:'dt',  title:'Conversión inválida a DATE',       badge:'Error 241', insert:`INSERT INTO lab.DemoFecha(Fecha) VALUES ('Calle Duarte #10');`, error:`Msg 241
+Conversion failed when converting date and/or time from character string.`, fix:`INSERT INTO lab.DemoFecha(Fecha) VALUES ('2025-11-11');`, ok:`(1 row affected)`},
+ {id:'id',  title:'IDENTITY con valor explícito',     badge:'Error 544', insert:`INSERT INTO lab.DemoIdentidad(Id, Nombre) VALUES (10,'Prueba');`, error:`Msg 544
+Cannot insert explicit value for identity column when IDENTITY_INSERT is OFF.`, fix:`SET IDENTITY_INSERT lab.DemoIdentidad ON;
+INSERT INTO lab.DemoIdentidad(Id, Nombre) VALUES (10,'OK');
+SET IDENTITY_INSERT lab.DemoIdentidad OFF;`, ok:`(1 row affected)`},
+ {id:'cnt', title:'Valores ≠ columnas',              badge:'Error 213', insert:`INSERT INTO lab.DemoValores VALUES (1);`, error:`Msg 213
+Column name or number of supplied values does not match table definition.`, fix:`INSERT INTO lab.DemoValores(Col1, Col2) VALUES (1,'ok');`, ok:`(1 row affected)`},
+ {id:'obj', title:'Objeto inválido (contexto master)', badge:'Error 208', insert:`USE master; INSERT INTO dbo.Clientes(IdCliente,Nombre) VALUES (1,'Ana');`, error:`Msg 208
+Invalid object name 'dbo.Clientes'.`, fix:`USE EcoTechSolutions; INSERT INTO dbo.Clientes(IdCliente,Nombre) VALUES (2,'Luis');`, ok:`(1 row affected)`}
+];
+
+const cards = document.getElementById('cards');
+scenarios.forEach(s=>{
+  const el = document.createElement('div'); el.className='card error-card';
+  el.innerHTML = `
+    <div class="toast err" id="t-err-${s.id}">${s.badge}</div>
+    <div class="toast ok"  id="t-ok-${s.id}">OK</div>
+    <h3>${s.title} <span class="badge">${s.badge}</span></h3>
+    <div class="code" id="code-${s.id}">${s.insert}</div>
+    <div class="controls">
+      <button class="btn" onclick="runInsert('${s.id}')">Ejecutar INSERT</button>
+      <button class="btn secondary" onclick="showFix('${s.id}')">Ver corrección</button>
+    </div>
+    <div class="console" id="out-${s.id}" aria-live="polite"></div>`;
+  cards.appendChild(el);
+});
+
+// typing speed control
+const spd = document.getElementById('spd');
+const spdval = document.getElementById('spdval');
+spd.addEventListener('input',()=>{spdval.textContent = spd.value + ' ms/char';});
+function typeInto(el, text, speed){
+  el.innerHTML='';
+  const span = document.createElement('span'); span.className='typing'; el.appendChild(span);
+  let i=0; const timer = setInterval(()=>{ span.textContent = text.slice(0,++i); el.scrollTop=el.scrollHeight; if(i>=text.length){span.classList.remove('typing'); clearInterval(timer);} }, speed);
+}
+function toast(id, ok){
+  const e = document.getElementById('t-err-'+id); const o = document.getElementById('t-ok-'+id);
+  e.style.display='none'; o.style.display='none'; (ok?o:e).style.display='block'; setTimeout(()=>{(ok?o:e).style.display='none'}, 2200);
+}
+function runInsert(id){
+  const s = scenarios.find(x=>x.id===id); const out = document.getElementById('out-'+id);
+  out.classList.remove('shake');
+  typeInto(out, s.insert+'
+
+…enviando a SQL Server…', Number(spd.value));
+  setTimeout(()=>{ out.textContent = s.error; out.classList.add('shake'); toast(id,false); playTone(220,0.12,0.08); highlight(id); }, 800 + s.insert.length*Number(spd.value));
+}
+function showFix(id){
+  const s = scenarios.find(x=>x.id===id); const out = document.getElementById('out-'+id);
+  out.classList.remove('shake');
+  typeInto(out, s.fix+'
+
+…ejecutando…', Number(spd.value));
+  setTimeout(()=>{ out.textContent = s.ok; toast(id,true); playTone(880,0.12,0.08); }, 800 + s.fix.length*Number(spd.value));
+}
+function highlight(id){
+  const card = document.getElementById('code-'+id).parentElement; card.classList.add('highlight'); setTimeout(()=>card.classList.remove('highlight'), 1200);
+}
+
+// Quiz
+const quizBank=[
+  {q:'¿Qué error verás si repites un valor de PRIMARY KEY?', a:['2601','2627','8152','544'], r:1},
+  {q:'El mensaje "String or binary data would be truncated" corresponde a…', a:['Datos demasiado largos para la columna','Objeto no existe','IDENTITY desactivado','Fecha mal formateada'], r:0},
+  {q:'Insertar un valor en columna IDENTITY sin IDENTITY_INSERT produce…', a:['544','213','241','208'], r:0},
+  {q:'Si estás en master y la tabla existe en EcoTechSolutions, verás…', a:['208','2628','2601','2627'], r:0},
+  {q:'Cuando la cantidad de valores no coincide con columnas, el error es…', a:['213','241','544','8152'], r:0}
+];
+const quiz = document.getElementById('quiz');
+quizBank.forEach((item,i)=>{
+  const w = document.createElement('div'); w.className='quiz-item';
+  w.innerHTML = `<h4>${i+1}. ${item.q}</h4>` + item.a.map((opt,ix)=>`<label><input type="radio" name="q${i}" value="${ix}"> ${opt}</label>`).join('');
+  quiz.appendChild(w);
+});
+function gradeQuiz(){ let score=0; quizBank.forEach((q,i)=>{ const c=document.querySelector(`input[name="q${i}"]:checked`); if(c && Number(c.value)===q.r) score++; }); const box=document.getElementById('score'); box.style.display='block'; const pct=Math.round(score/quizBank.length*100); const ok=score>=4; box.className='result ' + (ok?'ok':'err'); box.textContent = `Resultado: ${score}/${quizBank.length}  ·  ${pct}% — ` + (ok? '¡Buen dominio!':'Repasa los casos y vuelve a intentar.'); }
+function resetQuiz(){ document.querySelectorAll('#quiz input[type=radio]').forEach(r=>r.checked=false); const box=document.getElementById('score'); box.style.display='none'; }
+</script>
+</body>
+</html>
